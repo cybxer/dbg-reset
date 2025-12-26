@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Days Bygone Reset Timer</title>
+    <style>
+        /* --- CSS: Modern & Sleek UI --- */
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.3);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at top right, #1e293b 0%, #0f172a 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        header {
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+
+        .user-location {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .timer-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+            border-color: rgba(56, 189, 248, 0.2);
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        /* Base Countdown Style */
+        .countdown {
+            font-weight: 700;
+            line-height: 1.1;
+            text-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        /* Style specifically for the Daily Timer (00:00:00) */
+        #daily-timer {
+            font-family: var(--font-mono);
+            font-size: 2.5rem;
+        }
+
+        /* Style specifically for the Weekly Timer (Text) */
+        #weekly-timer {
+            font-family: var(--font-main); /* Using main font to look like a sentence */
+            font-size: 1.5rem; /* Smaller font to fit the words */
+            letter-spacing: -0.03em;
+        }
+
+        .sub-text {
+            margin-top: 0.8rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        footer {
+            margin-top: 4rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        /* Responsive */
+        @media (min-width: 768px) {
+            .timer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Days Bygone Check</h1>
+            <div class="user-location" id="location-display">Detecting location...</div>
+        </header>
+
+        <div class="timer-grid">
+            <div class="card">
+                <div class="card-title">Daily Reset</div>
+                <div class="countdown" id="daily-timer">00:00:00</div>
+                <div class="sub-text"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Weekly Reset</div>
+                <div class="countdown" id="weekly-timer">Waiting...</div>
+                <div class="sub-text"></div>
+            </div>
+        </div>
+
+        <footer>
+            Updates automatically based on your system time.
+        </footer>
+    </div>
+
+    <script>
+        const RESET_HOUR_UTC = 12; //
+        const RESET_MINUTE_UTC = 0;
+        const RESET_DAY_OF_WEEK = 1; // 1 = Monday
+
+        function updateLocationDisplay() {
+            try {
+                const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                document.getElementById('location-display').textContent = `Your Timezone: ${timeZone}`;
+            } catch (e) {
+                document.getElementById('location-display').textContent = "Local Time Detected";
+            }
+        }
+
+        function getNextReset(isWeekly) {
+            const now = new Date();
+            let target = new Date(Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate(),
+                RESET_HOUR_UTC,
+                RESET_MINUTE_UTC,
+                0
+            ));
+
+            if (isWeekly) {
+                const dayOfWeek = target.getUTCDay(); 
+                let daysToAdd = (RESET_DAY_OF_WEEK + 7 - dayOfWeek) % 7;
+                
+                if (daysToAdd === 0 && now.getTime() >= target.getTime()) {
+                    daysToAdd = 7;
+                } else if (daysToAdd !== 0 && now.getTime() >= target.getTime() && dayOfWeek === RESET_DAY_OF_WEEK) {
+                    // Safety logic
+                }
+                target.setUTCDate(target.getUTCDate() + daysToAdd);
+            } 
+            
+            if (target.getTime() <= now.getTime()) {
+                if (isWeekly) {
+                    target.setUTCDate(target.getUTCDate() + 7);
+                } else {
+                    target.setUTCDate(target.getUTCDate() + 1);
+                }
+            }
+            return target;
+        }
+
+        function formatTimeRemaining(ms, isWeekly) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const days = Math.floor(totalSeconds / (3600 * 24));
+            const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            const pad = (num) => num.toString().padStart(2, '0');
+
+            if (isWeekly) {
+                // NEW FORMAT: 3d 04h 05m 06s
+                return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+            } else {
+                // DAILY: Compact format (12:30:05)
+                if (days > 0) {
+                    return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+                }
+                return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+            }
+        }
+
+        function updateTimers() {
+            const now = new Date();
+            const nextDaily = getNextReset(false);
+            const nextWeekly = getNextReset(true);
+
+            // Using Math.max to prevent negative numbers
+            const dailyDiff = Math.max(0, nextDaily - now);
+            const weeklyDiff = Math.max(0, nextWeekly - now);
+
+            document.getElementById('daily-timer').textContent = formatTimeRemaining(dailyDiff, false);
+            document.getElementById('weekly-timer').textContent = formatTimeRemaining(weeklyDiff, true);
+        }
+
+        updateLocationDisplay();
+        updateTimers();
+        setInterval(updateTimers, 1000);
+    </script>
+</body>
+</html>
